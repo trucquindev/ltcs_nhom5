@@ -70,3 +70,65 @@ export const updateCardDetailAPI = async (cardId, updateData) => {
   );
   return response.data;
 };
+
+export const registerUserAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/users/register`,
+    data,
+  );
+  toast.success(
+    "Account successfully registered!, Please check and verify your mail before logging in!",
+    { theme: "colored" },
+  );
+  return response.data;
+};
+
+export const verifyUserAPI = async (data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/users/verify`,
+    data,
+  );
+  toast.success(
+    "Account successfully verify!, Now you can login and enjoy our services! Have a good day!",
+    { theme: "colored" },
+  );
+  return response.data;
+};
+
+export const refreshTokenAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/users/refresh_token`,
+  );
+  return response.data;
+};
+
+export const inviteUserToBoardAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/invitations/board`,
+    data,
+  );
+  toast.success("User invited to board successfully");
+  return response.data;
+};
+
+export const fetchNotificationsAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/invitations/`,
+  );
+  return response.data;
+};
+
+export const updateBoardInvitationAPI = async (invitationId, status) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/invitations/board/${invitationId}`,
+    { status },
+  );
+  return response.data;
+};
+
+export const fetchCardActivityAPI = async (cardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/cards/${cardId}/activity`,
+  );
+  return response.data;
+};
