@@ -132,3 +132,151 @@ export const fetchCardActivityAPI = async (cardId) => {
   );
   return response.data;
 };
+
+export const addChecklistItemAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/cards/${cardId}/checklist`,
+    data,
+  );
+  return response.data;
+};
+
+export const updateChecklistItemAPI = async (cardId, itemId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/checklist/${itemId}`,
+    data,
+  );
+  return response.data;
+};
+
+export const deleteChecklistItemAPI = async (cardId, itemId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}/checklist/${itemId}`,
+  );
+  return response.data;
+};
+export const updateCardPriorityAPI = async (cardId, priority) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/priority`,
+    { priority },
+  );
+  return response.data;
+};
+export const updateCardDatesAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/dates`,
+    data,
+  );
+  return response.data;
+};
+export const updateCardEstimationAPI = async (cardId, estimatedMinutes) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/estimation`,
+    { estimatedMinutes },
+  );
+  return response.data;
+};
+export const deleteCardAPI = async (cardId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}`,
+  );
+  return response.data;
+};
+export const fetchTimeLogsAPI = async (cardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs`,
+  );
+  return response.data;
+};
+export const addTimeLogAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs`,
+    data,
+  );
+  return response.data;
+};
+export const deleteTimeLogAPI = async (cardId, logId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs/${logId}`,
+  );
+  return response.data;
+};
+export const fetchBoardAnalyticsAPI = async (boardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/boards/${boardId}/analytics`,
+  );
+  return response.data;
+};
+export const exportBoardCsvAPI = (boardId) =>
+  `${API_ROOT}/v1/boards/${boardId}/export/csv`;
+export const exportBoardJsonAPI = (boardId) =>
+  `${API_ROOT}/v1/boards/${boardId}/export/json`;
+export const fetchDashboardAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/dashboard`,
+  );
+  return response.data;
+};
+export const fetchWorkspacesAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/api/workspaces`,
+  );
+  return response.data;
+};
+export const createWorkspaceAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/api/workspaces`,
+    data,
+  );
+  return response.data;
+};
+export const updateWorkspaceAPI = async (workspaceId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/api/workspaces/${workspaceId}`,
+    data,
+  );
+  return response.data;
+};
+export const deleteWorkspaceAPI = async (workspaceId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/api/workspaces/${workspaceId}`,
+  );
+  return response.data;
+};
+export const addWorkspaceMemberAPI = async (workspaceId, email) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members`,
+    { email },
+  );
+  return response.data;
+};
+export const removeWorkspaceMemberAPI = async (workspaceId, userId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members/${userId}`,
+  );
+  return response.data;
+};
+export const updateWorkspaceMemberRoleAPI = async (
+  workspaceId,
+  userId,
+  accessLevel,
+) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members/${userId}/role`,
+    { accessLevel },
+  );
+  return response.data;
+};
+export const fetchBoardChatMessagesAPI = async (boardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/boards/${boardId}/chats`,
+  );
+  return response.data;
+};
+export const sendBoardChatMessageAPI = async (boardId, messageData) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/boards/${boardId}/chats`,
+    messageData,
+  );
+  return response.data;
+};
