@@ -220,7 +220,72 @@ public class WorkspacesController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Update member role
+    /// </summary>
+    [HttpPut("{id}/members/{targetUserId}/role")]
+    public async Task<IActionResult> UpdateMemberRole(Guid id, Guid targetUserId, [FromBody] UpdateMemberRoleRequest request)
+    {
+        var userId = GetUserId();
+        if (userId == targetUserId) return BadRequest(new { message = "Cannot change your own role" });
 
+        // Verify current user has FullAccess
+        var hasAccess = await _db.WorkspaceMembers
+            .AnyAsync(wm => wm.WorkspaceId == id && wm.UserId == userId && wm.AccessLevel == AccessLevel.FullAccess);
+        if (!hasAccess) return Forbid();
+
+        // Prevent changing workspace owner role if they are the owner
+        var workspace = await _db.Workspaces.FindAsync(id);
+        if (workspace?.OwnerId == targetUserId) return BadRequest(new { message = "Cannot change the workspace owner's role" });
+
+        var member = await _db.WorkspaceMembers
+            .FirstOrDefaultAsync(wm => wm.WorkspaceId == id && wm.UserId == targetUserId);
+
+        if (member == null) return NotFound();
+
+        member.AccessLevel = request.AccessLevel;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { member.AccessLevel });
+    }
+
+    /// <summary>
+    /// Remove member from workspace
+    /// </summary>
+    [HttpDelete("{id}/members/{targetUserId}")]
+    public async Task<IActionResult> RemoveMember(Guid id, Guid targetUserId)
+    {
+        var userId = GetUserId();
+
+        // Either leaving voluntarily, or kicked by an admin
+        if (userId != targetUserId)
+        {
+            var hasAccess = await _db.WorkspaceMembers
+                .AnyAsync(wm => wm.WorkspaceId == id && wm.UserId == userId && wm.AccessLevel == AccessLevel.FullAccess);
+            if (!hasAccess) return Forbid();
+        }
+
+        var workspace = await _db.Workspaces.FindAsync(id);
+        if (workspace?.OwnerId == targetUserId) return BadRequest(new { message = "Workspace owner cannot be removed" });
+
+        var member = await _db.WorkspaceMembers
+            .FirstOrDefaultAsync(wm => wm.WorkspaceId == id && wm.UserId == targetUserId);
+
+        if (member == null) return NotFound();
+
+        _db.WorkspaceMembers.Remove(member);
+
+        // Also remove them from all boards in this workspace
+        var boardMembers = await _db.BoardMembers
+            .Include(bm => bm.Board)
+            .Where(bm => bm.Board.WorkspaceId == id && bm.UserId == targetUserId)
+            .ToListAsync();
+
+        _db.BoardMembers.RemoveRange(boardMembers);
+
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
 }
 
 public record CreateWorkspaceRequest
