@@ -217,3 +217,66 @@ export const fetchDashboardAPI = async () => {
   );
   return response.data;
 };
+export const fetchWorkspacesAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/api/workspaces`,
+  );
+  return response.data;
+};
+export const createWorkspaceAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/api/workspaces`,
+    data,
+  );
+  return response.data;
+};
+export const updateWorkspaceAPI = async (workspaceId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/api/workspaces/${workspaceId}`,
+    data,
+  );
+  return response.data;
+};
+export const deleteWorkspaceAPI = async (workspaceId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/api/workspaces/${workspaceId}`,
+  );
+  return response.data;
+};
+export const addWorkspaceMemberAPI = async (workspaceId, email) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members`,
+    { email },
+  );
+  return response.data;
+};
+export const removeWorkspaceMemberAPI = async (workspaceId, userId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members/${userId}`,
+  );
+  return response.data;
+};
+export const updateWorkspaceMemberRoleAPI = async (
+  workspaceId,
+  userId,
+  accessLevel,
+) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members/${userId}/role`,
+    { accessLevel },
+  );
+  return response.data;
+};
+export const fetchBoardChatMessagesAPI = async (boardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/boards/${boardId}/chats`,
+  );
+  return response.data;
+};
+export const sendBoardChatMessageAPI = async (boardId, messageData) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/boards/${boardId}/chats`,
+    messageData,
+  );
+  return response.data;
+};
