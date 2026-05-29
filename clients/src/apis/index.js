@@ -182,3 +182,38 @@ export const deleteCardAPI = async (cardId) => {
   );
   return response.data;
 };
+export const fetchTimeLogsAPI = async (cardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs`,
+  );
+  return response.data;
+};
+export const addTimeLogAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs`,
+    data,
+  );
+  return response.data;
+};
+export const deleteTimeLogAPI = async (cardId, logId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs/${logId}`,
+  );
+  return response.data;
+};
+export const fetchBoardAnalyticsAPI = async (boardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/boards/${boardId}/analytics`,
+  );
+  return response.data;
+};
+export const exportBoardCsvAPI = (boardId) =>
+  `${API_ROOT}/v1/boards/${boardId}/export/csv`;
+export const exportBoardJsonAPI = (boardId) =>
+  `${API_ROOT}/v1/boards/${boardId}/export/json`;
+export const fetchDashboardAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/dashboard`,
+  );
+  return response.data;
+};
