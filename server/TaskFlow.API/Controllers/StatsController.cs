@@ -106,7 +106,90 @@ public class StatsController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Get board statistics: task count per column, per priority, completion rate
+    /// </summary>
+    [HttpGet("board/{boardId}")]
+    public async Task<IActionResult> GetBoardStats(Guid boardId)
+    {
+        var userId = GetUserId();
 
+        var board = await _db.Boards
+            .Include(b => b.Columns)
+            .ThenInclude(c => c.Tasks)
+            .Include(b => b.Workspace)
+            .ThenInclude(w => w.Members)
+            .FirstOrDefaultAsync(b => b.Id == boardId && b.Workspace.Members.Any(m => m.UserId == userId));
+
+        if (board == null) return NotFound();
+
+        var allTasks = board.Columns.SelectMany(c => c.Tasks).ToList();
+        var totalTasks = allTasks.Count;
+
+        // Tasks per column (for donut chart)
+        var tasksByColumn = board.Columns
+            .OrderBy(c => c.Position)
+            .Select(c => new
+            {
+                c.Id,
+                Name = c.Title,
+                c.Color,
+                Count = c.Tasks.Count
+            })
+            .ToList();
+
+        // Tasks per priority
+        var tasksByPriority = allTasks
+            .GroupBy(t => t.Priority)
+            .Select(g => new
+            {
+                Priority = (int)g.Key,
+                PriorityName = g.Key.ToString(),
+                Count = g.Count()
+            })
+            .OrderBy(x => x.Priority)
+            .ToList();
+
+        // Completion rate (tasks in last column = "done")
+        var lastColumn = board.Columns.OrderBy(c => c.Position).LastOrDefault();
+        var completedCount = lastColumn?.Tasks.Count ?? 0;
+        var completionRate = totalTasks > 0 ? Math.Round((double)completedCount / totalTasks * 100, 1) : 0;
+
+        // Overdue tasks
+        var overdueTasks = allTasks.Count(t => t.DueDate.HasValue && t.DueDate.Value < DateTime.UtcNow);
+
+        // Tasks created this week
+        var weekAgo = DateTime.UtcNow.AddDays(-7);
+        var tasksThisWeek = allTasks.Count(t => t.CreatedAt >= weekAgo);
+
+        // Recent tasks (last 10)
+        var recentTasks = allTasks
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(10)
+            .Select(t => new
+            {
+                t.Id,
+                t.Title,
+                t.Priority,
+                ColumnName = board.Columns.FirstOrDefault(c => c.Id == t.ColumnId)?.Title,
+                ColumnColor = board.Columns.FirstOrDefault(c => c.Id == t.ColumnId)?.Color,
+                t.DueDate,
+                t.CreatedAt
+            })
+            .ToList();
+
+        return Ok(new
+        {
+            TotalTasks = totalTasks,
+            CompletedCount = completedCount,
+            CompletionRate = completionRate,
+            OverdueTasks = overdueTasks,
+            TasksThisWeek = tasksThisWeek,
+            TasksByColumn = tasksByColumn,
+            TasksByPriority = tasksByPriority,
+            RecentTasks = recentTasks
+        });
+    }
 
     /// <summary>
     /// Get workspace-level statistics
