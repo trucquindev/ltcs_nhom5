@@ -135,7 +135,356 @@ public class TrelloCardExtrasController : ControllerBase
     }
 }
 
+// ─── Board Analytics ─────────────────────────────────────────────────────────
 
+[ApiController]
+[Route("v1/boards/{boardId}/analytics")]
+[Authorize]
+public class TrelloAnalyticsController : ControllerBase
+{
+    private readonly AppDbContext _db;
+    public TrelloAnalyticsController(AppDbContext db) => _db = db;
+    private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    /// GET /v1/boards/{boardId}/analytics
+    [HttpGet]
+    public async Task<IActionResult> GetAnalytics(Guid boardId)
+    {
+        var userId = GetUserId();
+        var board = await _db.Boards
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.Assignees).ThenInclude(a => a.User)
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.TimeLogs)
+            .Include(b => b.BoardMembers).ThenInclude(bm => bm.User)
+            .FirstOrDefaultAsync(b => b.Id == boardId);
+
+        if (board == null) return NotFound();
+
+        var allTasks = board.Columns.SelectMany(c => c.Tasks).ToList();
+        var totalTasks = allTasks.Count;
+        var lastColumn = board.Columns.OrderBy(c => c.Position).LastOrDefault();
+
+        // Tasks by column
+        var tasksByColumn = board.Columns.OrderBy(c => c.Position).Select(c => new
+        {
+            _id = c.Id,
+            name = c.Title,
+            color = c.Color,
+            count = c.Tasks.Count
+        }).ToList();
+
+        // Tasks by priority
+        var tasksByPriority = allTasks
+            .GroupBy(t => t.Priority)
+            .Select(g => new
+            {
+                priority = (int)g.Key,
+                priorityName = g.Key.ToString(),
+                count = g.Count()
+            })
+            .OrderBy(x => x.priority)
+            .ToList();
+
+        // Completed vs overdue per member
+        var memberStats = board.BoardMembers.Select(bm =>
+        {
+            var memberTasks = allTasks.Where(t => t.Assignees.Any(a => a.UserId == bm.UserId)).ToList();
+            return new
+            {
+                _id = bm.UserId,
+                displayName = bm.User.DisplayName,
+                avatar = bm.User.AvatarUrl,
+                totalAssigned = memberTasks.Count,
+                completed = lastColumn != null ? memberTasks.Count(t => t.ColumnId == lastColumn.Id) : 0,
+                overdue = memberTasks.Count(t => t.DueDate.HasValue && t.DueDate.Value < DateTime.UtcNow && (lastColumn == null || t.ColumnId != lastColumn.Id)),
+                totalTimeMinutes = memberTasks.Sum(t => t.TimeLogs.Where(tl => tl.UserId == bm.UserId).Sum(tl => tl.DurationMinutes))
+            };
+        }).ToList();
+
+        // Burndown: daily completion counts last 14 days
+        var burndown = Enumerable.Range(0, 14).Select(offset =>
+        {
+            var date = DateTime.UtcNow.Date.AddDays(-13 + offset);
+            return new
+            {
+                date = date.ToString("MMM dd"),
+                completed = lastColumn != null
+                    ? allTasks.Count(t => t.ColumnId == lastColumn.Id && t.UpdatedAt.Date == date)
+                    : 0,
+                created = allTasks.Count(t => t.CreatedAt.Date == date)
+            };
+        }).ToList();
+
+        var completedCount = lastColumn?.Tasks.Count ?? 0;
+        var completionRate = totalTasks > 0 ? Math.Round((double)completedCount / totalTasks * 100, 1) : 0;
+        var overdueTasks = allTasks.Count(t => t.DueDate.HasValue && t.DueDate.Value < DateTime.UtcNow && (lastColumn == null || t.ColumnId != lastColumn.Id));
+
+        return Ok(new
+        {
+            totalTasks,
+            completedCount,
+            completionRate,
+            overdueTasks,
+            tasksByColumn,
+            tasksByPriority,
+            memberStats,
+            burndown
+        });
+    }
+}
+
+// ─── Time Tracking ───────────────────────────────────────────────────────────
+
+[ApiController]
+[Route("v1/cards/{cardId}/timelogs")]
+[Authorize]
+public class TrelloTimeLogController : ControllerBase
+{
+    private readonly AppDbContext _db;
+    public TrelloTimeLogController(AppDbContext db) => _db = db;
+    private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    /// GET /v1/cards/{cardId}/timelogs
+    [HttpGet]
+    public async Task<IActionResult> GetAll(Guid cardId)
+    {
+        var logs = await _db.TaskTimeLogs
+            .Where(tl => tl.TaskId == cardId)
+            .Include(tl => tl.User)
+            .OrderByDescending(tl => tl.LoggedAt)
+            .Select(tl => new
+            {
+                _id = tl.Id,
+                taskId = tl.TaskId,
+                userId = tl.UserId,
+                userDisplayName = tl.User.DisplayName,
+                userAvatar = tl.User.AvatarUrl,
+                durationMinutes = tl.DurationMinutes,
+                note = tl.Note,
+                loggedAt = tl.LoggedAt
+            })
+            .ToListAsync();
+
+        return Ok(logs);
+    }
+
+    /// POST /v1/cards/{cardId}/timelogs
+    [HttpPost]
+    public async Task<IActionResult> Add(Guid cardId, [FromBody] AddTimeLogRequest req)
+    {
+        var userId = GetUserId();
+        var log = new TaskTimeLog
+        {
+            TaskId = cardId,
+            UserId = userId,
+            DurationMinutes = req.DurationMinutes,
+            Note = req.Note,
+            LoggedAt = req.LoggedAt ?? DateTime.UtcNow
+        };
+        _db.TaskTimeLogs.Add(log);
+        await _db.SaveChangesAsync();
+
+        var user = await _db.Users.FindAsync(userId);
+        return StatusCode(201, new
+        {
+            _id = log.Id,
+            taskId = log.TaskId,
+            userId = log.UserId,
+            userDisplayName = user?.DisplayName,
+            userAvatar = user?.AvatarUrl,
+            durationMinutes = log.DurationMinutes,
+            note = log.Note,
+            loggedAt = log.LoggedAt
+        });
+    }
+
+    /// DELETE /v1/cards/{cardId}/timelogs/{id}
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid cardId, Guid id)
+    {
+        var log = await _db.TaskTimeLogs.FirstOrDefaultAsync(tl => tl.Id == id && tl.TaskId == cardId);
+        if (log == null) return NotFound();
+        _db.TaskTimeLogs.Remove(log);
+        await _db.SaveChangesAsync();
+        return Ok(new { deleteResult = "Time log deleted" });
+    }
+}
+
+// ─── Board Export ─────────────────────────────────────────────────────────────
+
+[ApiController]
+[Route("v1/boards/{boardId}/export")]
+[Authorize]
+public class TrelloExportController : ControllerBase
+{
+    private readonly AppDbContext _db;
+    public TrelloExportController(AppDbContext db) => _db = db;
+    private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    /// GET /v1/boards/{boardId}/export/csv — Export board as CSV
+    [HttpGet("csv")]
+    public async Task<IActionResult> ExportCsv(Guid boardId)
+    {
+        var board = await _db.Boards
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.Assignees).ThenInclude(a => a.User)
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.Comments)
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.SubTasks)
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.TimeLogs)
+            .FirstOrDefaultAsync(b => b.Id == boardId);
+
+        if (board == null) return NotFound();
+
+        var lines = new List<string> { "Column,Task,Priority,Start Date,Due Date,Assignees,Sub-tasks,Comments,Time Logged (min),Status" };
+
+        foreach (var col in board.Columns.OrderBy(c => c.Position))
+        {
+            foreach (var task in col.Tasks.OrderBy(t => t.Position))
+            {
+                var assignees = string.Join("; ", task.Assignees.Select(a => a.User.DisplayName));
+                var subTaskInfo = task.SubTasks.Any() ? $"{task.SubTasks.Count(st => st.IsCompleted)}/{task.SubTasks.Count}" : "—";
+                var timeLogged = task.TimeLogs.Sum(tl => tl.DurationMinutes);
+                var line = $"\"{Esc(col.Title)}\",\"{Esc(task.Title)}\",\"{task.Priority}\",\"{task.StartDate?.ToString("yyyy-MM-dd") ?? ""}\",\"{task.DueDate?.ToString("yyyy-MM-dd") ?? ""}\",\"{Esc(assignees)}\",\"{subTaskInfo}\",\"{task.Comments.Count}\",\"{timeLogged}\",\"{Esc(col.Title)}\"";
+                lines.Add(line);
+            }
+        }
+
+        var csv = string.Join("\n", lines);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+        return File(bytes, "text/csv", $"{board.Name.Replace(" ", "_")}_export.csv");
+    }
+
+    /// GET /v1/boards/{boardId}/export/json — Export board as JSON
+    [HttpGet("json")]
+    public async Task<IActionResult> ExportJson(Guid boardId)
+    {
+        var board = await _db.Boards
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.Assignees).ThenInclude(a => a.User)
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.Comments).ThenInclude(c => c.User)
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.SubTasks)
+            .Include(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.TimeLogs).ThenInclude(tl => tl.User)
+            .FirstOrDefaultAsync(b => b.Id == boardId);
+
+        if (board == null) return NotFound();
+
+        var export = new
+        {
+            board = new { _id = board.Id, title = board.Name, description = board.Description },
+            exportedAt = DateTime.UtcNow,
+            columns = board.Columns.OrderBy(c => c.Position).Select(c => new
+            {
+                title = c.Title,
+                tasks = c.Tasks.OrderBy(t => t.Position).Select(t => new
+                {
+                    title = t.Title,
+                    description = t.Description,
+                    priority = t.Priority.ToString(),
+                    startDate = t.StartDate,
+                    dueDate = t.DueDate,
+                    assignees = t.Assignees.Select(a => a.User.DisplayName),
+                    subTasks = t.SubTasks.Select(st => new { st.Title, st.IsCompleted }),
+                    comments = t.Comments.Select(cm => new { cm.Content, user = cm.User.DisplayName, cm.CreatedAt }),
+                    timeLogs = t.TimeLogs.Select(tl => new { user = tl.User.DisplayName, tl.DurationMinutes, tl.Note, tl.LoggedAt })
+                })
+            })
+        };
+
+        return Ok(export);
+    }
+
+    private static string Esc(string s) => s?.Replace("\"", "\"\"") ?? "";
+}
+
+// ─── Global Dashboard for trello-web ─────────────────────────────────────────
+
+[ApiController]
+[Route("v1/dashboard")]
+[Authorize]
+public class TrelloDashboardController : ControllerBase
+{
+    private readonly AppDbContext _db;
+    public TrelloDashboardController(AppDbContext db) => _db = db;
+    private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    /// GET /v1/dashboard — Global dashboard stats
+    [HttpGet]
+    public async Task<IActionResult> GetDashboard()
+    {
+        var userId = GetUserId();
+
+        var boards = await _db.BoardMembers
+            .Where(bm => bm.UserId == userId)
+            .Include(bm => bm.Board).ThenInclude(b => b.Columns).ThenInclude(c => c.Tasks).ThenInclude(t => t.Assignees)
+            .Select(bm => bm.Board)
+            .ToListAsync();
+
+        var totalBoards = boards.Count;
+        var allTasks = boards.SelectMany(b => b.Columns).SelectMany(c => c.Tasks).ToList();
+        var myTasks = allTasks.Where(t => t.Assignees.Any(a => a.UserId == userId)).ToList();
+
+        var overdueCount = myTasks.Count(t =>
+        {
+            if (!t.DueDate.HasValue) return false;
+            var board = boards.FirstOrDefault(b => b.Columns.Any(c => c.Id == t.ColumnId));
+            var lastCol = board?.Columns.OrderBy(c => c.Position).LastOrDefault();
+            return t.DueDate.Value < DateTime.UtcNow && (lastCol == null || t.ColumnId != lastCol.Id);
+        });
+
+        // Weekly chart
+        var chartData = Enumerable.Range(0, 7).Select(offset =>
+        {
+            var date = DateTime.UtcNow.Date.AddDays(-6 + offset);
+            return new
+            {
+                date = date.ToString("MMM dd"),
+                completed = allTasks.Count(t =>
+                {
+                    var b = boards.FirstOrDefault(bd => bd.Columns.Any(c => c.Id == t.ColumnId));
+                    var lc = b?.Columns.OrderBy(c => c.Position).LastOrDefault();
+                    return lc != null && t.ColumnId == lc.Id && t.UpdatedAt.Date == date;
+                })
+            };
+        }).ToList();
+
+        // My tasks details
+        var myTasksDetails = myTasks
+            .OrderBy(t => t.DueDate ?? DateTime.MaxValue)
+            .Take(20)
+            .Select(t =>
+            {
+                var b = boards.FirstOrDefault(bd => bd.Columns.Any(c => c.Id == t.ColumnId));
+                var col = b?.Columns.FirstOrDefault(c => c.Id == t.ColumnId);
+                return new
+                {
+                    _id = t.Id,
+                    title = t.Title,
+                    priority = (int)t.Priority,
+                    dueDate = t.DueDate,
+                    boardId = b?.Id,
+                    boardName = b?.Name,
+                    columnName = col?.Title,
+                    columnColor = col?.Color
+                };
+            }).ToList();
+
+        // Recent boards
+        var recentBoards = boards.OrderByDescending(b => b.CreatedAt).Take(6).Select(b => new
+        {
+            _id = b.Id,
+            title = b.Name,
+            taskCount = b.Columns.Sum(c => c.Tasks.Count),
+            backgroundColor = b.BackgroundColor
+        }).ToList();
+
+        return Ok(new
+        {
+            totalBoards,
+            assignedTasksCount = myTasks.Count,
+            overdueTasksCount = overdueCount,
+            myTasks = myTasksDetails,
+            weeklyChart = chartData,
+            recentBoards
+        });
+    }
+}
 
 // ─── Extra DTOs ──────────────────────────────────────────────────────────────
 
