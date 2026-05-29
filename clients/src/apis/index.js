@@ -132,3 +132,53 @@ export const fetchCardActivityAPI = async (cardId) => {
   );
   return response.data;
 };
+
+export const addChecklistItemAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/cards/${cardId}/checklist`,
+    data,
+  );
+  return response.data;
+};
+
+export const updateChecklistItemAPI = async (cardId, itemId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/checklist/${itemId}`,
+    data,
+  );
+  return response.data;
+};
+
+export const deleteChecklistItemAPI = async (cardId, itemId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}/checklist/${itemId}`,
+  );
+  return response.data;
+};
+export const updateCardPriorityAPI = async (cardId, priority) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/priority`,
+    { priority },
+  );
+  return response.data;
+};
+export const updateCardDatesAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/dates`,
+    data,
+  );
+  return response.data;
+};
+export const updateCardEstimationAPI = async (cardId, estimatedMinutes) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/estimation`,
+    { estimatedMinutes },
+  );
+  return response.data;
+};
+export const deleteCardAPI = async (cardId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}`,
+  );
+  return response.data;
+};
