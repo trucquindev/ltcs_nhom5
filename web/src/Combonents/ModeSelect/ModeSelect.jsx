@@ -1,1 +1,0 @@
-const C = () => null; export default C;
