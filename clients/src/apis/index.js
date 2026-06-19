@@ -1,0 +1,282 @@
+import { API_ROOT } from "~/untils/constrain";
+
+export const updateBoardDetailsApi = async (boardId, updateData) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/boards/${boardId}`,
+    updateData,
+  );
+  return response.data;
+};
+
+export const fetchBoardAPI = async (searchPath) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/boards${searchPath}`,
+  );
+  return response.data;
+};
+
+export const createNewBoardAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/boards`,
+    data,
+  );
+  toast.success("Board created successfully");
+  return response.data;
+};
+
+export const moveCardDifferentColumnAPI = async (updateData) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/boards/supports/moving_card`,
+    updateData,
+  );
+  return response.data;
+};
+
+export const createNewColumnAPI = async (dataColumn) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/columns/`,
+    dataColumn,
+  );
+  return response.data;
+};
+
+export const deleteColumnAPI = async (columnId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/columns/${columnId}`,
+  );
+  return response.data;
+};
+
+export const updateColumnDetailsApi = async (columnId, updateData) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/columns/${columnId}`,
+    updateData,
+  );
+  return response.data;
+};
+
+export const createNewCardAPI = async (dataCard) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/cards/`,
+    dataCard,
+  );
+  return response.data;
+};
+
+export const updateCardDetailAPI = async (cardId, updateData) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}`,
+    updateData,
+  );
+  return response.data;
+};
+
+export const registerUserAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/users/register`,
+    data,
+  );
+  toast.success(
+    "Account successfully registered!, Please check and verify your mail before logging in!",
+    { theme: "colored" },
+  );
+  return response.data;
+};
+
+export const verifyUserAPI = async (data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/users/verify`,
+    data,
+  );
+  toast.success(
+    "Account successfully verify!, Now you can login and enjoy our services! Have a good day!",
+    { theme: "colored" },
+  );
+  return response.data;
+};
+
+export const refreshTokenAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/users/refresh_token`,
+  );
+  return response.data;
+};
+
+export const inviteUserToBoardAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/invitations/board`,
+    data,
+  );
+  toast.success("User invited to board successfully");
+  return response.data;
+};
+
+export const fetchNotificationsAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/invitations/`,
+  );
+  return response.data;
+};
+
+export const updateBoardInvitationAPI = async (invitationId, status) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/invitations/board/${invitationId}`,
+    { status },
+  );
+  return response.data;
+};
+
+export const fetchCardActivityAPI = async (cardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/cards/${cardId}/activity`,
+  );
+  return response.data;
+};
+
+export const addChecklistItemAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/cards/${cardId}/checklist`,
+    data,
+  );
+  return response.data;
+};
+
+export const updateChecklistItemAPI = async (cardId, itemId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/checklist/${itemId}`,
+    data,
+  );
+  return response.data;
+};
+
+export const deleteChecklistItemAPI = async (cardId, itemId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}/checklist/${itemId}`,
+  );
+  return response.data;
+};
+export const updateCardPriorityAPI = async (cardId, priority) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/priority`,
+    { priority },
+  );
+  return response.data;
+};
+export const updateCardDatesAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/dates`,
+    data,
+  );
+  return response.data;
+};
+export const updateCardEstimationAPI = async (cardId, estimatedMinutes) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/v1/cards/${cardId}/estimation`,
+    { estimatedMinutes },
+  );
+  return response.data;
+};
+export const deleteCardAPI = async (cardId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}`,
+  );
+  return response.data;
+};
+export const fetchTimeLogsAPI = async (cardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs`,
+  );
+  return response.data;
+};
+export const addTimeLogAPI = async (cardId, data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs`,
+    data,
+  );
+  return response.data;
+};
+export const deleteTimeLogAPI = async (cardId, logId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/v1/cards/${cardId}/timelogs/${logId}`,
+  );
+  return response.data;
+};
+export const fetchBoardAnalyticsAPI = async (boardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/boards/${boardId}/analytics`,
+  );
+  return response.data;
+};
+export const exportBoardCsvAPI = (boardId) =>
+  `${API_ROOT}/v1/boards/${boardId}/export/csv`;
+export const exportBoardJsonAPI = (boardId) =>
+  `${API_ROOT}/v1/boards/${boardId}/export/json`;
+export const fetchDashboardAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/dashboard`,
+  );
+  return response.data;
+};
+export const fetchWorkspacesAPI = async () => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/api/workspaces`,
+  );
+  return response.data;
+};
+export const createWorkspaceAPI = async (data) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/api/workspaces`,
+    data,
+  );
+  return response.data;
+};
+export const updateWorkspaceAPI = async (workspaceId, data) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/api/workspaces/${workspaceId}`,
+    data,
+  );
+  return response.data;
+};
+export const deleteWorkspaceAPI = async (workspaceId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/api/workspaces/${workspaceId}`,
+  );
+  return response.data;
+};
+export const addWorkspaceMemberAPI = async (workspaceId, email) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members`,
+    { email },
+  );
+  return response.data;
+};
+export const removeWorkspaceMemberAPI = async (workspaceId, userId) => {
+  const response = await authorizedAxiosInstance.delete(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members/${userId}`,
+  );
+  return response.data;
+};
+export const updateWorkspaceMemberRoleAPI = async (
+  workspaceId,
+  userId,
+  accessLevel,
+) => {
+  const response = await authorizedAxiosInstance.put(
+    `${API_ROOT}/api/workspaces/${workspaceId}/members/${userId}/role`,
+    { accessLevel },
+  );
+  return response.data;
+};
+export const fetchBoardChatMessagesAPI = async (boardId) => {
+  const response = await authorizedAxiosInstance.get(
+    `${API_ROOT}/v1/boards/${boardId}/chats`,
+  );
+  return response.data;
+};
+export const sendBoardChatMessageAPI = async (boardId, messageData) => {
+  const response = await authorizedAxiosInstance.post(
+    `${API_ROOT}/v1/boards/${boardId}/chats`,
+    messageData,
+  );
+  return response.data;
+};
